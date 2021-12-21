@@ -1,5 +1,7 @@
 package com.nivelics.store.serviceproduct.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nivelics.store.serviceproduct.entity.Category;
 import com.nivelics.store.serviceproduct.entity.Product;
 import com.nivelics.store.serviceproduct.service.ProductService;
@@ -10,8 +12,12 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.validation.Valid;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/products")
@@ -47,8 +53,60 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<Product> createProduct(@RequestBody Product product){
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product, BindingResult result){
+        if (result.hasErrors()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, this.formatMessage(result));
+        }
         Product productCreate =  productService.createProduct(product);
         return ResponseEntity.status(HttpStatus.CREATED).body(productCreate);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Product> updateProduct(@PathVariable("id") Long id, @RequestBody Product product){
+        product.setId(id);
+        Product productDB =  productService.updateProduct(product);
+        if (productDB == null){
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(productDB);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Product> deleteProduct(@PathVariable("id") Long id){
+        Product productDelete = productService.deleteProduct(id);
+        if (productDelete == null){
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(productDelete);
+    }
+
+    @GetMapping("/{id}/stock")
+    public ResponseEntity<Product> updateStockProduct(@PathVariable  Long id ,@RequestParam(name = "quantity", required = true) Double quantity){
+        Product product = productService.updateStock(id, quantity);
+        if (product == null){
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(product);
+    }
+
+    private String formatMessage( BindingResult result){
+        List<Map<String,String>> errors = result.getFieldErrors().stream()
+                .map(err ->{
+                    Map<String,String>  error =  new HashMap<>();
+                    error.put(err.getField(), err.getDefaultMessage());
+                    return error;
+
+                }).collect(Collectors.toList());
+        ErrorMessage errorMessage = ErrorMessage.builder()
+                .code("01")
+                .messages(errors).build();
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonString="";
+        try {
+            jsonString = mapper.writeValueAsString(errorMessage);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return jsonString;
     }
 }
