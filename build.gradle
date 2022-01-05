@@ -2,6 +2,9 @@ plugins {
 	id 'org.springframework.boot' version '2.6.1'
 	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 	id 'java'
+	id 'jacoco'
+	id 'checkstyle'
+	id 'org.sonarqube' version '3.0'
 }
 
 group = 'com.nivelics.store'
@@ -45,4 +48,17 @@ dependencyManagement {
 
 test {
 	useJUnitPlatform()
+}
+jacocoTestCoverageVerification {
+	violationRules {
+		rule {
+			limit {
+				minimum = 0.2
+			}
+		}
+	}
+}
+
+checkstyle {
+	checkstyleTest.enabled = true
 }
